@@ -7,25 +7,6 @@ export default function PersonObjectApp({ isMaximized }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Migration: Check for localStorage data
-                const saved = localStorage.getItem('voca-person-object')
-                if (saved) {
-                    const localPairs = JSON.parse(saved)
-                    if (Array.isArray(localPairs) && localPairs.length > 0) {
-                        for (const p of localPairs) {
-                            await fetch('http://localhost:3000/pairs', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    person: p.person,
-                                    object: p.object
-                                })
-                            })
-                        }
-                    }
-                    localStorage.removeItem('voca-person-object')
-                }
-
                 // Fetch data
                 const response = await fetch('http://localhost:3000/pairs')
                 const data = await response.json()

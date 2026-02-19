@@ -1,5 +1,21 @@
 {
-  "words": [],
+  "words": [
+    {
+      "id": "36c1",
+      "word": "audition",
+      "type": "countable"
+    },
+    {
+      "id": "1089",
+      "word": "information",
+      "type": "uncountable"
+    },
+    {
+      "id": "30c5",
+      "word": "apple",
+      "type": "countable"
+    }
+  ],
   "pairs": [],
   "fiveStepWords": [
     {

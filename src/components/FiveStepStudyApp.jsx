@@ -15,14 +15,35 @@ const shuffleArray = (array) => {
     return arr;
 };
 
-export default function FiveStepStudyApp({ isMaximized }) {
+export default function FiveStepStudyApp({ isMaximized, initialWords, onClearInitialWords }) {
     // Session state
     const [sessionWords, setSessionWords] = useState([])
     const [step, setStep] = useState(1) // 1 to 9, 10=Summary
     const [mode, setMode] = useState('easy') // 'easy' | 'hard'
+    const [targetStage, setTargetStage] = useState(5) // Default 5 stages
 
     // For Stage 1
     const [inputRows, setInputRows] = useState(() => [{ id: Date.now(), eng: '', kor: '' }])
+
+    useEffect(() => {
+        if (initialWords && initialWords.length > 0) {
+            // Load initial words into input stage
+            // We need to give them new temporary IDs for this session to avoid conflicts or just usage
+            const formatted = initialWords.map(w => ({
+                id: generateId(), // Create new session ID
+                eng: w.eng,
+                kor: w.kor
+            }))
+            // Add one empty row at the end
+            setInputRows([...formatted, { id: generateId(), eng: '', kor: '' }])
+            setStep(1) // Ensure we are at step 1
+
+            // Clear the initial words prop so we don't re-load
+            if (onClearInitialWords) {
+                onClearInitialWords()
+            }
+        }
+    }, [initialWords, onClearInitialWords])
 
     const handleSave = (validRows) => {
         if (validRows.length === 0) {
@@ -33,8 +54,10 @@ export default function FiveStepStudyApp({ isMaximized }) {
         setStep(2)
     }
 
+    const maxStep = (targetStage - 1) * 2 + 1
+
     const handleNextStep = () => {
-        if (step < 9) {
+        if (step < maxStep) {
             setStep(prev => prev + 1)
         } else {
             setStep(10) // Summary
@@ -44,6 +67,10 @@ export default function FiveStepStudyApp({ isMaximized }) {
                 origin: { y: 0.6 }
             })
         }
+    }
+
+    const handleEarlyExit = () => {
+        setStep(10) // Jump to Summary
     }
 
     const handleRestart = () => {
@@ -74,11 +101,14 @@ export default function FiveStepStudyApp({ isMaximized }) {
             {step <= 9 && (
                 <div className="progress__container">
                     <div className="progress-bar-container">
-                        {[1, 2, 3, 4, 5].map(s => (
-                            <div key={s} className={`step-indicator ${visualStage >= s ? 'active' : ''}`}>
-                                {s}단계 {s === 1 ? '(입력)' : ''}
-                            </div>
-                        ))}
+                        {[1, 2, 3, 4, 5].map(s => {
+                            if (s > targetStage) return null
+                            return (
+                                <div key={s} className={`step-indicator ${visualStage >= s ? 'active' : ''}`}>
+                                    {s}단계 {s === 1 ? '(입력)' : ''}
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
             )}
@@ -91,6 +121,8 @@ export default function FiveStepStudyApp({ isMaximized }) {
                         onSave={handleSave}
                         mode={mode}
                         setMode={setMode}
+                        targetStage={targetStage}
+                        setTargetStage={setTargetStage}
                     />
                 )}
                 {/* Steps 2-9 use TestStage */}
@@ -101,8 +133,9 @@ export default function FiveStepStudyApp({ isMaximized }) {
                         direction={(step % 2 === 0) ? "korToEng" : "engToKor"} // Even steps are Kor->Eng, Odd are Eng->Kor
                         allowHint={step <= 5} // Steps 2,3,4,5 have hints. 6,7,8,9 don't.
                         onComplete={handleNextStep}
+                        onEarlyExit={handleEarlyExit}
                         stageNum={step}
-                        totalSteps={9}
+                        totalSteps={maxStep}
                         isHardMode={mode === 'hard'}
                     />
                 )}
@@ -115,7 +148,7 @@ export default function FiveStepStudyApp({ isMaximized }) {
     )
 }
 
-function InputStage({ rows, setRows, onSave, mode, setMode }) {
+function InputStage({ rows, setRows, onSave, mode, setMode, targetStage, setTargetStage }) {
     const tableEndRef = useRef(null)
 
     const handleChange = (id, field, value) => {
@@ -179,6 +212,21 @@ function InputStage({ rows, setRows, onSave, mode, setMode }) {
                         />
                         Hard (랜덤)
                     </label>
+                </div>
+                <div className="stage-selector" style={{ display: 'flex', alignItems: 'center', marginTop: '10px', gap: '10px' }}>
+                    <span style={{ fontWeight: 'bold' }}>목표 단계:</span>
+                    {[2, 3, 4, 5].map(s => (
+                        <label key={s} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <input
+                                type="radio"
+                                name="targetStage"
+                                value={s}
+                                checked={targetStage === s}
+                                onChange={() => setTargetStage(s)}
+                            />
+                            {s}단계
+                        </label>
+                    ))}
                 </div>
             </div>
 
@@ -245,7 +293,7 @@ function InputStage({ rows, setRows, onSave, mode, setMode }) {
     )
 }
 
-function TestStage({ words, direction, allowHint, onComplete, stageNum, totalSteps, isHardMode }) {
+function TestStage({ words, direction, allowHint, onComplete, onEarlyExit, stageNum, totalSteps, isHardMode }) {
     const [displayWords] = useState(() => {
         if (isHardMode) return shuffleArray(words)
         return words
@@ -301,6 +349,12 @@ function TestStage({ words, direction, allowHint, onComplete, stageNum, totalSte
     }
 
     const isLargeList = displayWords.length > 10
+
+    const handleEarlyExitClick = () => {
+        if (window.confirm('학습을 조기에 종료하시겠습니까? 완료 화면으로 이동하여 단어를 저장할 수 있습니다.')) {
+            onEarlyExit()
+        }
+    }
 
     return (
         <div className="card">
@@ -374,6 +428,9 @@ function TestStage({ words, direction, allowHint, onComplete, stageNum, totalSte
             </div>
 
             <div className="actions-footer">
+                <button className="btn-secondary" onClick={handleEarlyExitClick} style={{ marginRight: 'auto' }}>
+                    조기 종료
+                </button>
                 {mode === 'input' ? (
                     <button className="btn-primary" onClick={handleCheck}>정답 확인</button>
                 ) : (

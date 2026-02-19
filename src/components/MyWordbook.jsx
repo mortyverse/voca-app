@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import '../App.css' // Recycle existing styles
 
-export default function MyWordbook({ isMaximized }) {
+export default function MyWordbook({ isMaximized, onStartFiveStep }) {
     // Data structure: { id, name, words: [{ id, eng, kor, date }] }
     const [folders, setFolders] = useState([])
     const [activeFolderId, setActiveFolderId] = useState(null)
@@ -12,7 +12,12 @@ export default function MyWordbook({ isMaximized }) {
     useEffect(() => {
         const saved = localStorage.getItem('myWordbook')
         if (saved) {
-            setFolders(JSON.parse(saved))
+            try {
+                setFolders(JSON.parse(saved))
+            } catch (e) {
+                console.error("Failed to parse words", e)
+                setFolders([])
+            }
         } else {
             // Default folder
             const initial = [{ id: 'default', name: '기본 단어장', words: [] }]
@@ -64,6 +69,18 @@ export default function MyWordbook({ isMaximized }) {
     const [userAnswers, setUserAnswers] = useState({})
     const [testResult, setTestResult] = useState(null)
 
+    // Selection & Edit State
+    const [selectedWordIds, setSelectedWordIds] = useState(new Set())
+    const [editingWordId, setEditingWordId] = useState(null)
+    const [editEng, setEditEng] = useState('')
+    const [editKor, setEditKor] = useState('')
+
+    // Reset selection when changing folders
+    useEffect(() => {
+        setSelectedWordIds(new Set())
+        setEditingWordId(null)
+    }, [activeFolderId])
+
     // Reset test state when changing folders
     useEffect(() => {
         setTestMode('none')
@@ -114,6 +131,72 @@ export default function MyWordbook({ isMaximized }) {
         setTestMode('result')
     }
 
+    // Edit Functions
+    const startEditing = (word) => {
+        setEditingWordId(word.id)
+        setEditEng(word.eng)
+        setEditKor(word.kor)
+    }
+
+    const cancelEditing = () => {
+        setEditingWordId(null)
+        setEditEng('')
+        setEditKor('')
+    }
+
+    const saveEdit = (folderId, wordId) => {
+        if (!editEng.trim() || !editKor.trim()) {
+            alert('단어와 뜻을 모두 입력해주세요.')
+            return
+        }
+
+        setFolders(folders.map(f => {
+            if (f.id === folderId) {
+                return {
+                    ...f,
+                    words: f.words.map(w => {
+                        if (w.id === wordId) {
+                            return { ...w, eng: editEng.trim(), kor: editKor.trim() }
+                        }
+                        return w
+                    })
+                }
+            }
+            return f
+        }))
+        setEditingWordId(null)
+    }
+
+    // Selection Functions
+    const toggleSelect = (id) => {
+        const newSet = new Set(selectedWordIds)
+        if (newSet.has(id)) {
+            newSet.delete(id)
+        } else {
+            newSet.add(id)
+        }
+        setSelectedWordIds(newSet)
+    }
+
+    const toggleSelectAll = () => {
+        if (!activeFolder) return
+        if (selectedWordIds.size === activeFolder.words.length) {
+            setSelectedWordIds(new Set())
+        } else {
+            const allIds = new Set(activeFolder.words.map(w => w.id))
+            setSelectedWordIds(allIds)
+        }
+    }
+
+    const handleStartFiveStepClick = () => {
+        if (selectedWordIds.size === 0) {
+            alert('학습할 단어를 선택해주세요.')
+            return
+        }
+        const selectedWords = activeFolder.words.filter(w => selectedWordIds.has(w.id))
+        onStartFiveStep(selectedWords)
+    }
+
     return (
         <div className="container">
             {!isMaximized && (
@@ -123,7 +206,7 @@ export default function MyWordbook({ isMaximized }) {
                 </header>
             )}
 
-            {!activeFolderId ? (
+            {!activeFolderId || !activeFolder ? (
                 // Folder List View
                 <div className="folder-list-view">
                     <div className="actions-row">
@@ -178,14 +261,27 @@ export default function MyWordbook({ isMaximized }) {
                 // Word List View
                 // Word List View or Test View
                 <div className="word-list-view">
-                    <div className="actions-row" style={{ marginBottom: '1rem' }}>
+                    <div className="actions-row" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
                         <button className="btn-secondary" onClick={() => setActiveFolderId(null)}>← 목록으로</button>
-                        <h2>{activeFolder.name}</h2>
-                        {testMode === 'none' && activeFolder.words.length > 0 && (
-                            <button className="btn-primary" onClick={startTest}>
-                                📝 테스트 시작
-                            </button>
-                        )}
+                        <h2 style={{ margin: '0 1rem' }}>{activeFolder.name}</h2>
+
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                            {testMode === 'none' && activeFolder.words.length > 0 && (
+                                <>
+                                    <button
+                                        className="btn-primary"
+                                        onClick={handleStartFiveStepClick}
+                                        disabled={selectedWordIds.size === 0}
+                                        title="선택한 단어를 5단계 암기 학습으로 보냅니다"
+                                    >
+                                        🧠 선택 단어 암기 ({selectedWordIds.size})
+                                    </button>
+                                    <button className="btn-primary" onClick={startTest}>
+                                        📝 테스트 시작
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {testMode === 'none' && (
@@ -193,22 +289,78 @@ export default function MyWordbook({ isMaximized }) {
                             {activeFolder.words.length === 0 ? (
                                 <p className="empty-state">저장된 단어가 없습니다.</p>
                             ) : (
-                                <ul className="word-list">
-                                    {activeFolder.words.map(word => (
-                                        <li key={word.id} className="word-item">
-                                            <div className="word-text">
-                                                <span className="eng" style={{ fontWeight: 'bold', marginRight: '10px' }}>{word.eng}</span>
-                                                <span className="kor" style={{ color: '#64748b' }}>{word.kor}</span>
-                                            </div>
-                                            <button
-                                                className="btn-delete"
-                                                onClick={() => deleteWord(activeFolder.id, word.id)}
-                                            >
-                                                🗑️
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <>
+                                    <div className="list-header" style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedWordIds.size === activeFolder.words.length && activeFolder.words.length > 0}
+                                                onChange={toggleSelectAll}
+                                                style={{ marginRight: '8px' }}
+                                            />
+                                            전체 선택 ({activeFolder.words.length})
+                                        </label>
+                                    </div>
+                                    <ul className="word-list">
+                                        {activeFolder.words.map(word => (
+                                            <li key={word.id} className="word-item" style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem' }}>
+                                                {editingWordId === word.id ? (
+                                                    <div style={{ display: 'flex', gap: '0.5rem', flex: 1, alignItems: 'center' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={editEng}
+                                                            onChange={e => setEditEng(e.target.value)}
+                                                            className="input-field"
+                                                            placeholder="영어"
+                                                            style={{ flex: 1 }}
+                                                            autoFocus
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={editKor}
+                                                            onChange={e => setEditKor(e.target.value)}
+                                                            className="input-field"
+                                                            placeholder="한글"
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                        <button className="btn-primary btn-sm" onClick={() => saveEdit(activeFolder.id, word.id)}>저장</button>
+                                                        <button className="btn-secondary btn-sm" onClick={cancelEditing}>취소</button>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedWordIds.has(word.id)}
+                                                            onChange={() => toggleSelect(word.id)}
+                                                            style={{ marginRight: '1rem' }}
+                                                        />
+                                                        <div className="word-text" style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                                                            <span className="eng" style={{ fontWeight: 'bold', marginRight: '10px', minWidth: '100px' }}>{word.eng}</span>
+                                                            <span className="kor" style={{ color: '#64748b' }}>{word.kor}</span>
+                                                        </div>
+                                                        <div className="item-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button
+                                                                className="btn-edit"
+                                                                onClick={() => startEditing(word)}
+                                                                title="수정"
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                className="btn-delete"
+                                                                onClick={() => deleteWord(activeFolder.id, word.id)}
+                                                                title="삭제"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </>
                             )}
                         </div>
                     )}

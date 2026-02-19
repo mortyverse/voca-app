@@ -7,28 +7,7 @@ export default function CountableApp({ isMaximized }) {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // 1. Check for old localStorage data to migrate
-                const saved = localStorage.getItem('voca-words')
-                if (saved) {
-                    const localWords = JSON.parse(saved)
-                    if (Array.isArray(localWords) && localWords.length > 0) {
-                        for (const word of localWords) {
-                            await fetch('http://localhost:3000/words', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    // ensure no ID collision with server generated ones, or just let server generate
-                                    word: word.word,
-                                    type: word.type
-                                })
-                            })
-                        }
-                    }
-                    // Clear migrated data
-                    localStorage.removeItem('voca-words')
-                }
-
-                // 2. Fetch data from server
+                // 1. Fetch data from server
                 const response = await fetch('http://localhost:3000/words')
                 const data = await response.json()
                 setWords(data)
