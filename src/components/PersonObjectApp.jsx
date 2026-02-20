@@ -138,14 +138,14 @@ function AddPairClient({ pairs, onAdd, onDelete }) {
                 {pairs.length === 0 ? (
                     <p className="empty-state">아직 추가된 단어가 없습니다.</p>
                 ) : (
-                    <ul className="pair-list">
+                    <ul className="pair-grid-list">
                         {pairs.map(p => (
-                            <li key={p.id} className="pair-item">
-                                <div className="pair-content">
-                                    <span className="pair-label">사람:</span> <strong>{p.person}</strong>
-                                    <span className="pair-arrow">↔</span>
-                                    <span className="pair-label">사물:</span> <strong>{p.object}</strong>
-                                </div>
+                            <li key={p.id} className="pair-item-grid">
+                                <span className="pair-label">사람</span>
+                                <span className="pair-word" title={p.person}>{p.person}</span>
+                                <span className="pair-arrow">↔</span>
+                                <span className="pair-label">사물</span>
+                                <span className="pair-word" title={p.object}>{p.object}</span>
                                 <button
                                     onClick={() => onDelete(p.id)}
                                     className="btn-delete"

@@ -1,58 +1,115 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Noto+Sans+KR:wght@100..900&family=Patrick+Hand&display=swap');
 
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* Color Palette (Warm Coffee & Soft Orange) */
+  /* Backgrounds */
+  --bg-primary: #EDEBE6;
+  /* Main application background (Darker Beige for contrast) */
+  --bg-sidebar: #FAF9F6;
+  /* Sidebar / Secondary navigations */
+  --bg-paper: #FFFFFF;
+  /* Notebook pages, cards */
+  --bg-accent-soft: #FFF3E0;
+  /* Hover states, light highlights */
+  --bg-yellow-note: #FFFDE7;
+  /* Sticky notes / Tips */
 
-  /* Color System */
-  --primary-blue: #2563eb;
-  --primary-hover: #1d4ed8;
-  --bg-color: #ffffff;
-  --text-main: #1e293b;
-  --text-sub: #64748b;
-  --card-bg: #ffffff;
-  --border-color: #e2e8f0;
+  /* Text */
+  --text-primary: #4E342E;
+  /* Body text (Dark Coffee) */
+  --text-secondary: #8D6E63;
+  /* Subtitles, metadata (Medium Coffee) */
+  --text-light: #BCAAA4;
+  /* Placeholders, disabled text (Light Coffee) */
 
-  color: var(--text-main);
-  background-color: var(--bg-color);
+  /* Interactive */
+  --accent-primary: #E65100;
+  /* Primary buttons, active states (Deep Orange) */
+  --accent-hover: #BF360C;
+  /* Hover states for primary actions */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Utility */
+  --border-line: #D7CCC8;
+  /* Subtle dividers, input borders (Darkened slightly) */
+  --line-notebook: rgba(62, 39, 35, 0.08);
+  /* Horizontal notebook lines (Slightly more visible) */
+  --margin-notebook: rgba(239, 83, 80, 0.15);
+  /* Vertical margin line (red) */
+
+  /* Typography */
+  --font-primary-en: 'Lora', serif;
+  --font-primary-kr: 'Noto Sans KR', sans-serif;
+  --font-hand-en: 'Patrick Hand', cursive;
+  --font-hand-kr: 'Gowun Dodum', cursive;
+
+  /* Shadows */
+  --shadow-soft: 0 4px 6px rgba(62, 39, 35, 0.05);
+  --shadow-card: 0 2px 8px rgba(62, 39, 35, 0.08);
+  /* Stronger card shadow */
+  --shadow-lift: 0 10px 25px rgba(62, 39, 35, 0.15);
+  /* Strong lift */
+  --shadow-float: 0 8px 16px rgba(62, 39, 35, 0.12);
+  --shadow-paper: 0 1px 3px rgba(0, 0, 0, 0.05), 0 20px 40px -10px rgba(62, 39, 35, 0.2);
+  /* Deep paper shadow */
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  /* Removed flex centering to fix layout shift issues */
-  /* display: flex; */
-  /* justify-content: center; */
-  /* align-items: center; */
-  min-width: 320px;
+  padding: 0;
+  font-family: var(--font-primary-kr);
+  /* Default to Korean Sans */
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+
+  /* Global Dot Pattern */
+  background-image: radial-gradient(#BCAAA4 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+
   min-height: 100vh;
-  background-color: var(--bg-color);
+  -webkit-font-smoothing: antialiased;
 }
 
-h1 {
-  font-size: 2.5em;
-  line-height: 1.1;
-  color: #0f172a;
-  font-weight: 700;
+/* Typography Defaults */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-primary-en);
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+}
+
+p {
+  line-height: 1.6;
+  margin-bottom: 1rem;
 }
 
 button {
-  border-radius: 0;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-family: var(--font-primary-kr);
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D7CCC8;
+  border-radius: 5px;
+  border: 2px solid var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #BCAAA4;
 }

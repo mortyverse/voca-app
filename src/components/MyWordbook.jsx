@@ -1,67 +1,200 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import '../App.css' // Recycle existing styles
 
 export default function MyWordbook({ isMaximized, onStartFiveStep }) {
-    // Data structure: { id, name, words: [{ id, eng, kor, date }] }
+    // Data structure: { id, name, parentId, color, words: [{ id, eng, kor, date }] }
     const [folders, setFolders] = useState([])
-    const [activeFolderId, setActiveFolderId] = useState(null)
+    const [activeFolderId, setActiveFolderId] = useState(null) // For viewing words
+    const [currentFolderId, setCurrentFolderId] = useState(null) // For navigation (Group level)
     const [newFolderName, setNewFolderName] = useState('')
+    const [newFolderColor, setNewFolderColor] = useState('#FFD700') // Default yellow
     const [isCreating, setIsCreating] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
 
-    // Load from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('myWordbook')
-        if (saved) {
-            try {
-                setFolders(JSON.parse(saved))
-            } catch (e) {
-                console.error("Failed to parse words", e)
-                setFolders([])
-            }
-        } else {
-            // Default folder
-            const initial = [{ id: 'default', name: '기본 단어장', words: [] }]
-            setFolders(initial)
-            localStorage.setItem('myWordbook', JSON.stringify(initial))
+    const API_URL = 'http://localhost:3000/folders'
+
+    // Helper: Folder Colors
+    const folderColors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#D4A5A5', '#9E9E9E']
+
+    // Load from API on mount
+    const fetchFolders = async () => {
+        try {
+            const res = await fetch(API_URL)
+            if (!res.ok) throw new Error('Failed to fetch')
+            let data = await res.json()
+
+            // Migration/Cleanup: Ensure structure and clean root words
+            // Note: We can't easily bulk update via standard json-server without multiple requests, 
+            // so we'll just fix the local state for display and let individual updates fix the DB over time if needed.
+            // OR we could fix them one by one. For now, let's just display correctly.
+            data = data.map((f, index) => ({
+                ...f,
+                parentId: f.parentId || null,
+                color: f.color || '#FFD700',
+                words: (!f.parentId) ? [] : (f.words || []), // Force clear words for root folders locally
+                order: (f.order !== undefined) ? f.order : index * 100 // Initialize order if missing
+            }))
+
+            setFolders(data)
+        } catch (e) {
+            console.error("Error fetching folders:", e)
+        } finally {
+            setIsLoading(false)
         }
+    }
+
+    useEffect(() => {
+        fetchFolders()
     }, [])
 
-    // Save to localStorage whenever folders change
-    useEffect(() => {
-        if (folders.length > 0) {
-            localStorage.setItem('myWordbook', JSON.stringify(folders))
-        }
-    }, [folders])
-
-    const createFolder = () => {
+    const createFolder = async () => {
         if (!newFolderName.trim()) return
+
+        // Calculate next order
+        const siblings = folders.filter(f => f.parentId === currentFolderId)
+        const maxOrder = siblings.reduce((max, f) => Math.max(max, f.order || 0), 0)
+
         const newFolder = {
             id: Date.now().toString(),
             name: newFolderName,
-            words: []
+            parentId: currentFolderId,
+            color: newFolderColor,
+            words: [],
+            order: maxOrder + 100 // Add to end
         }
-        setFolders([...folders, newFolder])
-        setNewFolderName('')
-        setIsCreating(false)
-    }
 
-    const deleteFolder = (id) => {
-        if (window.confirm('정말 이 단어장을 삭제하시겠습니까?')) {
-            setFolders(folders.filter(f => f.id !== id))
-            if (activeFolderId === id) setActiveFolderId(null)
-        }
-    }
-
-    const deleteWord = (folderId, wordId) => {
-        setFolders(folders.map(f => {
-            if (f.id === folderId) {
-                return { ...f, words: f.words.filter(w => w.id !== wordId) }
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newFolder)
+            })
+            if (res.ok) {
+                setFolders(prev => [...prev, newFolder])
+                setNewFolderName('')
+                setNewFolderColor('#FFD700')
+                setIsCreating(false)
             }
-            return f
-        }))
+        } catch (e) {
+            alert('폴더 생성 실패: ' + e.message)
+        }
+    }
+
+    const deleteFolder = async (id) => {
+        if (!window.confirm('정말 이 단어장(과 포함된 하위 폴더)을 삭제하시겠습니까?')) return
+
+        // 1. Identify all folders to delete (Self + Children)
+        const idsToDelete = new Set([id])
+        folders.forEach(f => {
+            if (f.parentId === id) idsToDelete.add(f.id)
+        })
+
+        // 2. Optimistic Update (Update UI immediately)
+        const previousFolders = [...folders]
+        setFolders(prev => prev.filter(f => !idsToDelete.has(f.id)))
+        if (activeFolderId === id) setActiveFolderId(null)
+        if (currentFolderId === id) setCurrentFolderId(null)
+
+        // 3. Perform API Deletes
+        try {
+            await Promise.all([...idsToDelete].map(folderId =>
+                fetch(`${API_URL}/${folderId}`, { method: 'DELETE' })
+            ))
+        } catch (e) {
+            console.error("Delete failed", e)
+            alert('삭제 중 오류가 발생했습니다.')
+            setFolders(previousFolders) // Revert on error
+        }
+    }
+
+    const deleteWord = async (folderId, wordId) => {
+        // Optimistic Update
+        const targetFolder = folders.find(f => f.id === folderId)
+        if (!targetFolder) return
+
+        const updatedWords = targetFolder.words.filter(w => w.id !== wordId)
+        const updatedFolder = { ...targetFolder, words: updatedWords }
+
+        setFolders(prev => prev.map(f => f.id === folderId ? updatedFolder : f))
+
+        try {
+            await fetch(`${API_URL}/${folderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words: updatedWords })
+            })
+        } catch (e) {
+            console.error("Update failed", e)
+            // Revert logic would go here if strict
+        }
     }
 
     const activeFolder = folders.find(f => f.id === activeFolderId)
+
+    // Filter folders for current view and sort
+    const visibleFolders = folders
+        .filter(f => f.parentId === currentFolderId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+
+    const currentFolder = folders.find(f => f.id === currentFolderId)
+
+    // DnD Logic
+    const dragItem = useRef(null)
+    const dragOverItem = useRef(null)
+
+    const handleDragStart = (e, position) => {
+        dragItem.current = position
+    }
+
+    const handleDragEnter = (e, position) => {
+        dragOverItem.current = position
+    }
+
+    const handleSort = async () => {
+        if (dragItem.current === null || dragOverItem.current === null) return
+
+        // Clone visible folders to reorder locally
+        const _visibleFolders = [...visibleFolders]
+        const draggedItemContent = _visibleFolders[dragItem.current]
+
+        // Remove and Insert
+        _visibleFolders.splice(dragItem.current, 1)
+        _visibleFolders.splice(dragOverItem.current, 0, draggedItemContent)
+
+        // Calculate new orders
+        // Reset refs
+        dragItem.current = null
+        dragOverItem.current = null
+
+        // Apply new order values based on index * 100
+        const updates = _visibleFolders.map((f, index) => ({
+            ...f,
+            order: index * 100
+        }))
+
+        // Optimistic Update Global State
+        const updatedIds = new Set(updates.map(u => u.id))
+        setFolders(prev => prev.map(f => {
+            if (updatedIds.has(f.id)) {
+                return updates.find(u => u.id === f.id)
+            }
+            return f
+        }))
+
+        // Verify visually
+        // API Updates
+        try {
+            await Promise.all(updates.map(f =>
+                fetch(`${API_URL}/${f.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order: f.order })
+                })
+            ))
+        } catch (e) {
+            console.error("Reorder failed", e)
+        }
+    }
 
     // Test Mode State
     const [testMode, setTestMode] = useState('none') // 'none', 'testing', 'result'
@@ -144,27 +277,35 @@ export default function MyWordbook({ isMaximized, onStartFiveStep }) {
         setEditKor('')
     }
 
-    const saveEdit = (folderId, wordId) => {
+    const saveEdit = async (folderId, wordId) => {
         if (!editEng.trim() || !editKor.trim()) {
             alert('단어와 뜻을 모두 입력해주세요.')
             return
         }
 
-        setFolders(folders.map(f => {
-            if (f.id === folderId) {
-                return {
-                    ...f,
-                    words: f.words.map(w => {
-                        if (w.id === wordId) {
-                            return { ...w, eng: editEng.trim(), kor: editKor.trim() }
-                        }
-                        return w
-                    })
-                }
+        const targetFolder = folders.find(f => f.id === folderId)
+        if (!targetFolder) return
+
+        const updatedWords = targetFolder.words.map(w => {
+            if (w.id === wordId) {
+                return { ...w, eng: editEng.trim(), kor: editKor.trim() }
             }
-            return f
-        }))
+            return w
+        })
+
+        // Optimistic Update
+        setFolders(prev => prev.map(f => f.id === folderId ? { ...f, words: updatedWords } : f))
         setEditingWordId(null)
+
+        try {
+            await fetch(`${API_URL}/${folderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words: updatedWords })
+            })
+        } catch (e) {
+            console.error("Save edit failed", e)
+        }
     }
 
     // Selection Functions
@@ -209,59 +350,124 @@ export default function MyWordbook({ isMaximized, onStartFiveStep }) {
             {!activeFolderId || !activeFolder ? (
                 // Folder List View
                 <div className="folder-list-view">
-                    <div className="actions-row">
-                        <h2 style={{ margin: 0 }}>단어장 목록</h2>
+                    <div className="actions-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            {currentFolderId && (
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => setCurrentFolderId(null)}
+                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}
+                                >
+                                    ← 뒤로
+                                </button>
+                            )}
+                            <h2 style={{ margin: 0 }}>
+                                {currentFolder ? currentFolder.name : '단어장 목록'}
+                            </h2>
+                        </div>
                         <button
                             className="btn-primary"
                             onClick={() => setIsCreating(true)}
                             disabled={isCreating}
                         >
-                            + 새 단어장
+                            + 새 {currentFolderId ? '단어장' : '그룹/폴더'}
                         </button>
                     </div>
 
                     {isCreating && (
                         <div className="card create-folder-form">
-                            <div className="form-group">
+                            <div className="form-group" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <input
                                     type="text"
                                     className="input-field"
-                                    placeholder="단어장 이름"
+                                    placeholder={currentFolderId ? "단어장 이름" : "폴더 이름"}
                                     value={newFolderName}
                                     onChange={e => setNewFolderName(e.target.value)}
                                     autoFocus
                                     onKeyDown={e => e.key === 'Enter' && createFolder()}
+                                    style={{ width: '100%' }}
                                 />
-                                <button className="btn-primary" onClick={createFolder}>확인</button>
-                                <button className="btn-secondary" onClick={() => setIsCreating(false)}>취소</button>
+                                <div className="color-picker" style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0' }}>
+                                    {folderColors.map(c => (
+                                        <div
+                                            key={c}
+                                            onClick={() => setNewFolderColor(c)}
+                                            style={{
+                                                width: '24px',
+                                                height: '24px',
+                                                borderRadius: '50%',
+                                                backgroundColor: c,
+                                                cursor: 'pointer',
+                                                border: newFolderColor === c ? '2px solid #333' : '1px solid #ddd',
+                                                transform: newFolderColor === c ? 'scale(1.1)' : 'scale(1)'
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button className="btn-primary" onClick={createFolder}>확인</button>
+                                    <button className="btn-secondary" onClick={() => setIsCreating(false)}>취소</button>
+                                </div>
                             </div>
                         </div>
                     )}
 
                     <div className="folder-grid">
-                        {folders.map(folder => (
-                            <div key={folder.id} className="card folder-card" onClick={() => setActiveFolderId(folder.id)}>
-                                <div className="folder-icon">📁</div>
-                                <h3>{folder.name}</h3>
-                                <p>{folder.words.length}개의 단어</p>
-                                <button
-                                    className="btn-delete-folder"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        deleteFolder(folder.id)
+                        {visibleFolders.map((folder, index) => {
+                            const subFolderCount = folders.filter(f => f.parentId === folder.id).length
+                            return (
+                                <div
+                                    key={folder.id}
+                                    className="card folder-card compact"
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, index)}
+                                    onDragEnter={(e) => handleDragEnter(e, index)}
+                                    onDragEnd={handleSort}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                        if (currentFolderId === null) {
+                                            // Level 1 -> Enter Folder
+                                            setCurrentFolderId(folder.id)
+                                        } else {
+                                            // Level 2 -> Open Words
+                                            setActiveFolderId(folder.id)
+                                        }
                                     }}
                                 >
-                                    삭제
-                                </button>
-                            </div>
-                        ))}
+                                    <div className="folder-icon" style={{ color: folder.color || '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M10 4H4C2.9 4 2.01 4.9 2.01 6L2 18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V8C22 6.9 21.1 6 20 6H12L10 4Z" />
+                                        </svg>
+                                    </div>
+                                    <div className="folder-info-line">
+                                        <span className="folder-name">{folder.name}</span>
+                                        <span className="folder-count">
+                                            {currentFolderId === null
+                                                ? `(${subFolderCount}개 폴더)`
+                                                : `(${folder.words.length}개 단어)`
+                                            }
+                                        </span>
+                                    </div>
+                                    <button
+                                        className="btn-delete-folder"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            deleteFolder(folder.id)
+                                        }}
+                                        title="삭제"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
             ) : (
                 // Word List View
                 // Word List View or Test View
                 <div className="word-list-view">
-                    <div className="actions-row" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <div className="actions-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap' }}>
                         <button className="btn-secondary" onClick={() => setActiveFolderId(null)}>← 목록으로</button>
                         <h2 style={{ margin: '0 1rem' }}>{activeFolder.name}</h2>
 
@@ -290,7 +496,7 @@ export default function MyWordbook({ isMaximized, onStartFiveStep }) {
                                 <p className="empty-state">저장된 단어가 없습니다.</p>
                             ) : (
                                 <>
-                                    <div className="list-header" style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center' }}>
+                                    <div className="list-header" style={{ padding: '0.5rem 1rem', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold' }}>
                                             <input
                                                 type="checkbox"
@@ -303,7 +509,7 @@ export default function MyWordbook({ isMaximized, onStartFiveStep }) {
                                     </div>
                                     <ul className="word-list">
                                         {activeFolder.words.map(word => (
-                                            <li key={word.id} className="word-item" style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem' }}>
+                                            <li key={word.id} className="word-item" style={{ display: 'flex', alignItems: 'center', padding: '1rem 1.5rem' }}>
                                                 {editingWordId === word.id ? (
                                                     <div style={{ display: 'flex', gap: '0.5rem', flex: 1, alignItems: 'center' }}>
                                                         <input
@@ -371,7 +577,7 @@ export default function MyWordbook({ isMaximized, onStartFiveStep }) {
                             <p className="subtitle">한글 뜻을 입력하세요.</p>
                             <div className="test-list">
                                 {testWords.map((word, index) => (
-                                    <div key={word.id} className="test-item" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div key={word.id} className="test-item" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <div className="test-eng" style={{ flex: 1, fontWeight: 'bold', fontSize: '1.1rem' }}>
                                             {index + 1}. {word.eng}
                                         </div>

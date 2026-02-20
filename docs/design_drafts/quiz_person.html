@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizMaster - Final Design</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Sans+KR:wght@300;400;500;700&family=Patrick+Hand&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* --- Unified Design System --- */
+
+            /* Color Palette */
+            --bg-color: #FDFCF8;
+            --text-primary: #4E342E;
+            /* Dark Coffee */
+            --text-secondary: #8D6E63;
+            /* Medium Coffee */
+            --text-light: #BCAAA4;
+            /* Light Coffee */
+
+            --accent-color: #E65100;
+            /* Deep Orange */
+            --accent-hover: #BF360C;
+            --accent-bg: #FFF3E0;
+
+            --line-color: #EFEBE9;
+
+            /* Notebook Pattern Colors - SUBTLE */
+            --notebook-line: rgba(62, 39, 35, 0.04);
+            --notebook-margin: rgba(239, 83, 80, 0.06);
+
+            /* Typography */
+            --font-main-en: 'Lora', serif;
+            --font-main-ko: 'Noto Sans KR', sans-serif;
+            --font-hand-en: 'Patrick Hand', cursive;
+            --font-hand-ko: 'Gowun Dodum', cursive;
+
+            /* Spacing Constants */
+            --line-height: 48px;
+
+            /* Shadows */
+            --shadow-soft: 0 4px 20px rgba(62, 39, 35, 0.04);
+            --shadow-card: 0 2px 8px rgba(62, 39, 35, 0.03);
+            --shadow-float: 0 8px 16px rgba(62, 39, 35, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main-en);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background-image: radial-gradient(#D7CCC8 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(253, 252, 248, 0.95);
+            border-bottom: 1px solid var(--line-color);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .nav-link {
+            cursor: pointer;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-color);
+        }
+
+        .nav-link.active {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        .header-btn {
+            background: transparent;
+            color: var(--accent-color);
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            border: 1px solid var(--accent-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: var(--font-hand-en);
+            font-weight: 600;
+        }
+
+        .header-btn:hover {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        /* Main Container */
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #fff;
+            padding: 12px 24px;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--line-color);
+            position: relative;
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            font-family: var(--font-main-en);
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: 4px;
+        }
+
+        .fire {
+            color: var(--accent-color);
+        }
+
+        /* Progress */
+        .progress-section {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            align-items: flex-end;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .progress-stats {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-family: var(--font-hand-en);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #EFEBE9;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 65%;
+            border-radius: 3px;
+        }
+
+        /* Quiz Notebook Page - Lined Paper Style */
+        .card {
+            background-color: #fff;
+            background-image:
+                linear-gradient(90deg, transparent 39px, var(--notebook-margin) 39px, var(--notebook-margin) 40px, transparent 40px),
+                linear-gradient(var(--notebook-line) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 32px;
+            background-attachment: local;
+            background-position: 0 40px;
+
+            padding: 50px 40px 40px 60px;
+            border-radius: 4px;
+            box-shadow: var(--shadow-soft);
+            position: relative;
+            min-height: 420px;
+            text-align: left;
+            border: 1px solid var(--line-color);
+        }
+
+        /* Handwritten Note Decoration */
+        .handwritten-note {
+            font-family: var(--font-hand-en);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            transform: rotate(-3deg);
+            position: absolute;
+            right: 40px;
+            top: 20px;
+            opacity: 0.6;
+        }
+
+        /* Prompt Styling */
+        .prompt-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            display: inline-block;
+            background: #fff;
+            padding: 2px 8px;
+            border: 1px solid var(--line-color);
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .prompt-word {
+            font-size: 3.2rem;
+            color: var(--text-primary);
+            margin-bottom: 40px;
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        /* Handwriting Input Area */
+        .input-container {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            border-bottom: 2px solid var(--text-primary);
+            display: inline-block;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .answer-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 2rem;
+            color: var(--accent-color);
+            font-family: var(--font-hand-en);
+            outline: none;
+            padding: 5px 0;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .answer-input::placeholder {
+            color: var(--text-light);
+            opacity: 0.7;
+            font-family: var(--font-hand-en);
+        }
+
+        /* Action Area */
+        .button-area {
+            text-align: center;
+        }
+
+        .check-btn {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 12px 36px;
+            font-size: 1.1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(230, 81, 0, 0.2);
+            font-weight: 600;
+            font-family: var(--font-main-en);
+        }
+
+        .check-btn:hover {
+            transform: translateY(-2px);
+            background: var(--accent-hover);
+            box-shadow: 0 6px 14px rgba(230, 81, 0, 0.3);
+        }
+
+        .card-footer {
+            margin-top: 50px;
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--line-color);
+        }
+
+        .footer-link {
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .footer-link:hover {
+            color: var(--accent-color);
+        }
+
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 56px;
+            height: 56px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-float);
+            transition: transform 0.2s;
+            font-family: var(--font-hand-en);
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            background: var(--accent-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo">
+            <span>📓</span> QuizMaster
+        </div>
+        <div class="nav-links">
+            <div class="nav-link active">Study</div>
+            <div class="nav-link">Library</div>
+            <div class="nav-link">Stats</div>
+        </div>
+        <button class="header-btn">+ Add Pair</button>
+    </div>
+
+    <div class="container">
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Score</div>
+                <div class="stat-value">12 / 15</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Streak</div>
+                <div class="stat-value">5 <span class="fire">🔥</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Remaining</div>
+                <div class="stat-value">5</div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-header">
+                <div class="section-title">Daily Practice</div>
+                <div class="progress-stats">13 of 20 pairs completed</div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="handwritten-note">Don't forget!</div>
+
+            <div class="prompt-label">Prompt: Person</div>
+            <div class="prompt-word">Artist</div>
+
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <input type="text" class="answer-input" placeholder="Type answer..." autofocus>
+                </div>
+            </div>
+
+            <div class="button-area">
+                <button class="check-btn">Check Answer</button>
+            </div>
+
+            <div class="card-footer">
+                <div class="footer-link">💡 Show Hint</div>
+                <div class="footer-link">⏭ Skip</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fab">
+        <span>+</span>
+    </div>
+</body>
+
+</html>

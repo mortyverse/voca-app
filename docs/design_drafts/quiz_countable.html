@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocaNote - Final Design</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Sans+KR:wght@300;400;500;700&family=Patrick+Hand&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* --- Unified Design System --- */
+
+            /* Color Palette */
+            --bg-color: #FDFCF8;
+            --text-primary: #4E342E;
+            --text-secondary: #8D6E63;
+            --text-light: #BCAAA4;
+
+            --accent-color: #E65100;
+            --accent-hover: #BF360C;
+            --accent-bg: #FFF3E0;
+
+            --line-color: #EFEBE9;
+
+            /* Notebook Pattern Colors - SUBTLE */
+            --notebook-line: rgba(62, 39, 35, 0.04);
+            --notebook-margin: rgba(239, 83, 80, 0.06);
+
+            /* Typography */
+            --font-main-en: 'Lora', serif;
+            --font-main-ko: 'Noto Sans KR', sans-serif;
+            --font-hand-en: 'Patrick Hand', cursive;
+            --font-hand-ko: 'Gowun Dodum', cursive;
+
+            /* Spacing Constants */
+            --line-height: 48px;
+
+            /* Shadows */
+            --shadow-soft: 0 4px 20px rgba(62, 39, 35, 0.04);
+            --shadow-card: 0 2px 8px rgba(62, 39, 35, 0.03);
+            --shadow-float: 0 8px 16px rgba(62, 39, 35, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main-en);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            /* Subtle Dot Pattern */
+            background-image: radial-gradient(#D7CCC8 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(253, 252, 248, 0.95);
+            border-bottom: 1px solid var(--line-color);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .add-btn {
+            background: var(--text-primary);
+            color: #fff;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+            font-family: var(--font-main-en);
+        }
+
+        .add-btn:hover {
+            transform: translateY(-1px);
+            background: #3E2723;
+            box-shadow: 0 2px 8px rgba(62, 39, 35, 0.2);
+        }
+
+        .profile-img {
+            width: 36px;
+            height: 36px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.8rem;
+            font-family: var(--font-hand-en);
+        }
+
+        /* Stats */
+        .stats-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-badge {
+            background: #fff;
+            padding: 12px 24px;
+            border-radius: 4px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--line-color);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 200px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-bg);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+        }
+
+        .stat-info .label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+            font-family: var(--font-main-en);
+        }
+
+        .stat-info .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: var(--font-main-en);
+        }
+
+        /* Main Card - Lined Paper Style */
+        .game-card {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            /* Subtle Lined Paper */
+            background-image:
+                linear-gradient(90deg, transparent 39px, var(--notebook-margin) 39px, var(--notebook-margin) 40px, transparent 40px),
+                linear-gradient(var(--notebook-line) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 32px;
+            background-attachment: local;
+            background-position: 0 40px;
+
+            padding: 50px 40px 40px 60px;
+            position: relative;
+            box-shadow: var(--shadow-soft);
+            border-radius: 4px;
+            border: 1px solid var(--line-color);
+            text-align: center;
+        }
+
+        /* Tag Styling */
+        .tag {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-bg);
+            color: var(--accent-color);
+            font-size: 0.95rem;
+            padding: 4px 16px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(62, 39, 35, 0.1);
+            font-weight: 600;
+            border: 1px solid rgba(230, 81, 0, 0.2);
+            font-family: var(--font-hand-en);
+        }
+
+        .word-display {
+            margin-bottom: 40px;
+            margin-top: 20px;
+        }
+
+        .word {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .phonetic {
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            background: #EFEBE9;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Question Box - Sticky Note Style */
+        .question-box {
+            background: #FFFDE7;
+            /* Light Yellow */
+            padding: 16px;
+            margin: 0 auto 40px auto;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            max-width: 90%;
+            box-shadow: 0 2px 4px rgba(62, 39, 35, 0.05);
+            border: 1px solid #FFF59D;
+            font-family: var(--font-hand-en);
+            transform: rotate(-1deg);
+            position: relative;
+        }
+
+        /* Pin */
+        .question-box::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .actions-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            flex: 1;
+            max-width: 200px;
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--line-color);
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 6px rgba(62, 39, 35, 0.04);
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-color);
+            background: var(--accent-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(230, 81, 0, 0.15);
+        }
+
+        .btn-icon {
+            font-size: 1.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            transition: color 0.2s;
+        }
+
+        .btn-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: var(--font-main-en);
+            transition: color 0.2s;
+        }
+
+        .action-btn:hover .btn-icon,
+        .action-btn:hover .btn-label {
+            color: var(--accent-color);
+        }
+
+        .footer-hint {
+            margin-top: 40px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            width: 100%;
+            font-weight: 500;
+            font-family: var(--font-hand-en);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo">
+            <span>📓</span> VocaNote
+        </div>
+        <div class="header-actions">
+            <button class="add-btn">+ Add Words</button>
+            <div class="profile-img">AK</div>
+        </div>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-badge">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-info">
+                <div class="label">Current Streak</div>
+                <div class="value">15 Days</div>
+            </div>
+        </div>
+        <div class="stat-badge">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <div class="label">Daily Progress</div>
+                <div class="value">12 / 50</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-card">
+        <div class="tag">Grammar Quiz</div>
+
+        <div class="word-display">
+            <div class="word">Information</div>
+            <div class="phonetic">/ˌɪnfəˈmeɪʃn/</div>
+        </div>
+
+        <div class="question-box">
+            Is this noun Countable or Uncountable?
+        </div>
+
+        <div class="actions-row">
+            <div class="action-btn countable">
+                <div class="btn-icon">1️⃣</div>
+                <div class="btn-label">Countable</div>
+            </div>
+
+            <div class="action-btn uncountable">
+                <div class="btn-icon">💧</div>
+                <div class="btn-label">Uncountable</div>
+            </div>
+        </div>
+
+        <div class="footer-hint">
+            <span>⌨ Use keys 1 • 2</span>
+            <span>💡 Need a hint?</span>
+        </div>
+    </div>
+</body>
+
+</html>
